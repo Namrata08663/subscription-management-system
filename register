@@ -58,3 +58,60 @@ phone = input("Enter your phone number: ")
 
 # STEP 6: Call registration function
 register_user(name, email, password, role, phone)
+
+# STEP 7: Display all registered users
+
+def display_users():
+
+    conn = sqlite3.connect("subscription.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM users")
+
+    users = cursor.fetchall()
+
+    print("\n===== REGISTERED USERS =====")
+
+    if users:
+        for user in users:
+            print("\nUser ID:", user[0])
+            print("Name:", user[1])
+            print("Email:", user[2])
+            print("Role:", user[4])
+            print("Phone:", user[5])
+    else:
+        print("No users registered yet!")
+
+    conn.close()
+
+# STEP 8: Customer Login
+
+def login_user(email, password):
+
+    conn = sqlite3.connect("subscription.db")
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT * FROM users WHERE email = ?",
+        (email,)
+    )
+
+    user = cursor.fetchone()
+
+    conn.close()
+
+    if user is not None and user[3] == password:
+
+        print("\nLogin successful!")
+        print("Welcome,", user[1])
+        print("Your role:", user[4])
+
+    else:
+        print("\nInvalid email or password!")
+print("\n===== CUSTOMER LOGIN =====")
+
+email = input("Enter your email: ")
+password = input("Enter your password: ")
+
+login_user(email, password)
+
