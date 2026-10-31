@@ -1,108 +1,147 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Billing Management</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f3f5f9;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 650px;
-            margin: auto;
-            background: white;
-            padding: 22px;
-            border-radius: 12px;
-        }
-        h1 { color: #243b64; }
-        label {
-            display: block;
-            margin-top: 14px;
-            font-weight: bold;
-        }
-        input, select {
-            width: 100%;
-            padding: 11px;
-            margin-top: 6px;
-            box-sizing: border-box;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-        }
-        button {
-            margin-top: 20px;
-            padding: 12px;
-            width: 100%;
-            background: #2456a6;
-            color: white;
-            border: 0;
-            border-radius: 6px;
-            font-size: 16px;
-        }
-        .result {
-            margin-top: 20px;
-            padding: 15px;
-            background: #edf3ff;
-            border-radius: 8px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Billing Management</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f3f5f9;
+    margin: 0;
+    padding: 20px;
+}
+.container {
+    max-width: 650px;
+    margin: auto;
+    background: white;
+    padding: 22px;
+    border-radius: 12px;
+}
+h1 { color: #243b64; }
+label {
+    display: block;
+    margin-top: 14px;
+    font-weight: bold;
+}
+input, select {
+    width: 100%;
+    padding: 11px;
+    margin-top: 6px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+button {
+    margin-top: 15px;
+    padding: 12px;
+    width: 100%;
+    background: #2456a6;
+    color: white;
+    border: 0;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+}
+button:disabled {
+    background: #999;
+    cursor: not-allowed;
+}
+.result {
+    margin-top: 20px;
+    padding: 15px;
+    background: #edf3ff;
+    border-radius: 8px;
+}
+.status {
+    font-weight: bold;
+    color: #2456a6;
+}
+</style>
 </head>
+
 <body>
 <div class="container">
-    <h1>Billing Management</h1>
-    <p>Invoice Creation and Calculation</p>
 
-    <label>Customer Name</label>
-    <input type="text" id="customer" placeholder="Enter customer name">
+<h1>Billing Management</h1>
+<p>Invoice Creation and Calculation</p>
 
-    <label>Product Name</label>
-    <input type="text" id="product" placeholder="Enter product name">
+<label>Customer Name</label>
+<input type="text" id="customer" placeholder="Enter customer name">
 
-    <label>Quantity</label>
-    <input type="number" id="quantity" value="1" min="1">
+<label>Product Name</label>
+<input type="text" id="product" placeholder="Enter product name">
 
-    <label>Unit Price (₹)</label>
-    <input type="number" id="price" value="1000" min="0">
+<label>Quantity</label>
+<input type="number" id="quantity" value="1" min="1">
 
-    <label>Tax (%)</label>
-    <input type="number" id="tax" value="18" min="0">
+<label>Unit Price (₹)</label>
+<input type="number" id="price" value="1000" min="0">
 
-    <label>Discount Type</label>
-    <select id="discountType">
-        <option value="percentage">Percentage</option>
-        <option value="fixed">Fixed Amount</option>
-    </select>
+<label>Tax (%)</label>
+<input type="number" id="tax" value="18" min="0" max="100">
 
-    <label>Discount Value</label>
-    <input type="number" id="discount" value="0" min="0">
+<label>Discount Type</label>
+<select id="discountType">
+    <option value="percentage">Percentage</option>
+    <option value="fixed">Fixed Amount</option>
+</select>
 
-    <button onclick="calculateInvoice()">Calculate Invoice</button>
+<label>Discount Value</label>
+<input type="number" id="discount" value="0" min="0">
 
-    <div class="result" id="result">
-        <h3>Invoice Summary</h3>
-        <p>Enter details and calculate your invoice.</p>
-    </div>
+<button onclick="calculateInvoice()">Calculate Invoice</button>
+
+<div class="result" id="result">
+    <h3>Invoice Summary</h3>
+    <p>Enter details and calculate your invoice.</p>
+</div>
+
+<div id="statusSection" style="display:none;">
+    <h3>Invoice Status Management</h3>
+    <p>Current Status: <span class="status" id="status">Draft</span></p>
+
+    <button id="confirmBtn" onclick="confirmInvoice()">
+        Confirm Invoice
+    </button>
+
+    <button id="paidBtn" onclick="markPaid()">
+        Mark as Paid
+    </button>
+
+    <button id="cancelBtn" onclick="cancelInvoice()">
+        Cancel Invoice
+    </button>
+</div>
+
 </div>
 
 <script>
+let invoiceStatus = "Draft";
+let invoiceCreated = false;
+
 function calculateInvoice() {
+    const customer = document.getElementById("customer").value.trim();
+    const product = document.getElementById("product").value.trim();
+
     const quantity = Number(document.getElementById("quantity").value);
     const price = Number(document.getElementById("price").value);
     const taxRate = Number(document.getElementById("tax").value);
     const discountValue = Number(document.getElementById("discount").value);
     const discountType = document.getElementById("discountType").value;
 
-    if (quantity <= 0 || price < 0 || taxRate < 0 ||
-        discountValue < 0 || taxRate > 100 ||
+    if (!customer || !product || quantity <= 0 ||
+        price < 0 || taxRate < 0 || taxRate > 100 ||
+        discountValue < 0 ||
         !Number.isFinite(quantity + price + taxRate + discountValue)) {
-        alert("Please enter valid values.");
+        alert("Please enter valid invoice details.");
         return;
     }
 
     const subtotal = quantity * price;
+
     const discount = discountType === "percentage"
         ? subtotal * discountValue / 100
         : discountValue;
@@ -118,21 +157,64 @@ function calculateInvoice() {
 
     document.getElementById("result").innerHTML = `
         <h3>Invoice Summary</h3>
-        <p>Customer: ${escapeHTML(document.getElementById("customer").value)}</p>
-        <p>Product: ${escapeHTML(document.getElementById("product").value)}</p>
+        <p>Customer: ${escapeHTML(customer)}</p>
+        <p>Product: ${escapeHTML(product)}</p>
+        <p>Quantity: ${quantity}</p>
         <p>Subtotal: ₹${subtotal.toFixed(2)}</p>
         <p>Discount: ₹${discount.toFixed(2)}</p>
         <p>Tax: ₹${taxAmount.toFixed(2)}</p>
         <h3>Total: ₹${total.toFixed(2)}</h3>
     `;
+
+    invoiceCreated = true;
+    invoiceStatus = "Draft";
+
+    document.getElementById("statusSection").style.display = "block";
+    updateStatus();
+}
+
+function confirmInvoice() {
+    if (invoiceStatus !== "Draft") return;
+    invoiceStatus = "Confirmed";
+    updateStatus();
+}
+
+function markPaid() {
+    if (invoiceStatus !== "Confirmed") return;
+    invoiceStatus = "Paid";
+    updateStatus();
+}
+
+function cancelInvoice() {
+    if (!invoiceCreated || invoiceStatus === "Paid") return;
+
+    invoiceStatus = "Cancelled";
+    updateStatus();
+}
+
+function updateStatus() {
+    document.getElementById("status").textContent = invoiceStatus;
+
+    document.getElementById("confirmBtn").disabled =
+        invoiceStatus !== "Draft";
+
+    document.getElementById("paidBtn").disabled =
+        invoiceStatus !== "Confirmed";
+
+    document.getElementById("cancelBtn").disabled =
+        invoiceStatus === "Cancelled" || invoiceStatus === "Paid";
 }
 
 function escapeHTML(value) {
     return value.replace(/[&<>"']/g, char => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;",
-        '"': "&quot;", "'": "&#39;"
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
     })[char]);
 }
 </script>
+
 </body>
 </html>
