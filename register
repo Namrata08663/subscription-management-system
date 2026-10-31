@@ -1,117 +1,201 @@
+import json
+import os
 
-import sqlite3
-
-# STEP 1: Create database connection
-conn = sqlite3.connect("subscription.db")
-
-# STEP 2: Create cursor
-cursor = conn.cursor()
-
-# STEP 3: Create users table
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    role TEXT NOT NULL,
-    phone TEXT
-)
-""")
-
-conn.commit()
-conn.close()
-
-print("User database created successfully!")
+FILE_NAME = "subscriptions.json"
 
 
-# STEP 4: Register new user
-def register_user(name, email, password, role, phone):
+# ---------------- LOAD DATA ----------------
 
-    conn = sqlite3.connect("subscription.db")
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("""
-            INSERT INTO users (name, email, password, role, phone)
-            VALUES (?, ?, ?, ?, ?)
-        """, (name, email, password, role, phone))
-
-        conn.commit()
-        print("\nUser registered successfully!")
-
-    except sqlite3.IntegrityError:
-        print("\nThis email is already registered!")
-
-    finally:
-        conn.close()
+def load_data():
+    if os.path.exists(FILE_NAME):
+        try:
+            with open(FILE_NAME, "r") as file:
+                return json.load(file)
+        except json.JSONDecodeError:
+            return []
+    return []
 
 
-# STEP 5: Get user information
-print("\n===== CUSTOMER REGISTRATION =====")
+# ---------------- SAVE DATA ----------------
 
-name = input("Enter your name: ")
-email = input("Enter your email: ")
-password = input("Enter your password: ")
-role = input("Enter your role (customer/staff/admin): ").lower()
-phone = input("Enter your phone number: ")
+def save_data(data):
+    with open(FILE_NAME, "w") as file:
+        json.dump(data, file, indent=4)
 
-# STEP 6: Call registration function
-register_user(name, email, password, role, phone)
 
-# STEP 7: Display all registered users
+# ---------------- NAME VALIDATION ----------------
 
-def display_users():
+def get_name():
+    while True:
+        name = input("Enter your full name: ").strip()
 
-    conn = sqlite3.connect("subscription.db")
-    cursor = conn.cursor()
+        if name.replace(" ", "").isalpha() and len(name) >= 2:
+            return name
+        else:
+            print("Incorrect name! Name should contain letters only.")
 
-    cursor.execute("SELECT * FROM users")
 
-    users = cursor.fetchall()
+# ---------------- PHONE VALIDATION ----------------
+
+def get_phone():
+    while True:
+        phone = input("Enter phone number: ").strip()
+
+        if phone.isdigit() and len(phone) == 10:
+            return phone
+        else:
+            print("Incorrect phone number! Please enter exactly 10 digits.")
+
+
+# ---------------- EMAIL VALIDATION ----------------
+
+def get_email():
+    while True:
+        email = input("Enter email address: ").strip()
+
+        if "@" in email and "." in email.split("@")[-1]:
+            return email
+        else:
+            print("Incorrect email! Please enter a valid email address.")
+
+
+# ---------------- PASSWORD VALIDATION ----------------
+
+def get_password():
+    while True:
+        password = input("Create a password (minimum 6 characters): ")
+
+        if len(password) < 6:
+            print("Password must contain at least 6 characters.")
+            continue
+
+        confirm_password = input("Confirm your password: ")
+
+        if password != confirm_password:
+            print("Passwords do not match! Try again.")
+        else:
+            return password
+
+
+# ---------------- CHECK DUPLICATES ----------------
+
+def check_duplicate(data, email, phone):
+    for user in data:
+        if user["email"].lower() == email.lower():
+            print("This email is already registered!")
+            return True
+
+        if user["phone"] == phone:
+            print("This phone number is already registered!")
+            return True
+
+    return False
+
+
+# ---------------- CREATE ACCOUNT ----------------
+
+def create_account():
+    print("\n===== CREATE ACCOUNT =====")
+
+    data = load_data()
+
+    name = get_name()
+    phone = get_phone()
+
+    while True:
+        email = get_email()
+
+        if any(user["email"].lower() == email.lower() for user in data):
+            print("This email is already registered! Please use another email.")
+        else:
+            break
+
+    if any(user["phone"] == phone for user in data):
+        print("This phone number is already registered!")
+        return
+
+    password = get_password()
+
+    new_user = {
+        "name": name,
+        "phone": phone,
+        "email": email,
+        "password": password,
+        "subscription": None
+    }
+
+    data.append(new_user)
+    save_data(data)
+
+    print("\nAccount created successfully!")
+
+
+# ---------------- LOGIN ----------------
+
+def login():
+    print("\n===== LOGIN =====")
+
+    data = load_data()
+
+    email = input("Enter your email: ").strip()
+    password = input("Enter your password: ")
+
+    for user in data:
+        if user["email"].lower() == email.lower() and user["password"] == password:
+            print(f"\nWelcome, {user['name']}!")
+            return
+
+    print("Incorrect email or password!")
+
+
+# ---------------- SHOW USERS ----------------
+
+def show_users():
+    data = load_data()
+
+    if not data:
+        print("\nNo users registered yet.")
+        return
 
     print("\n===== REGISTERED USERS =====")
 
-    if users:
-        for user in users:
-            print("\nUser ID:", user[0])
-            print("Name:", user[1])
-            print("Email:", user[2])
-            print("Role:", user[4])
-            print("Phone:", user[5])
-    else:
-        print("No users registered yet!")
+    for number, user in enumerate(data, start=1):
+        print(f"\nUser {number}")
+        print("Name:", user["name"])
+        print("Phone:", user["phone"])
+        print("Email:", user["email"])
+        print("Subscription:", user["subscription"])
 
-    conn.close()
 
-# STEP 8: Customer Login
+# ---------------- MAIN PROGRAM ----------------
 
-def login_user(email, password):
+def main():
+    while True:
+        print("\n===================================")
+        print("   SUBSCRIPTION MANAGEMENT SYSTEM")
+        print("===================================")
+        print("1. Create Account")
+        print("2. Login")
+        print("3. Show Registered Users")
+        print("4. Exit")
 
-    conn = sqlite3.connect("subscription.db")
-    cursor = conn.cursor()
+        choice = input("\nEnter your choice: ")
 
-    cursor.execute(
-        "SELECT * FROM users WHERE email = ?",
-        (email,)
-    )
+        if choice == "1":
+            create_account()
 
-    user = cursor.fetchone()
+        elif choice == "2":
+            login()
 
-    conn.close()
+        elif choice == "3":
+            show_users()
 
-    if user is not None and user[3] == password:
+        elif choice == "4":
+            print("\nThank you for using the system!")
+            break
 
-        print("\nLogin successful!")
-        print("Welcome,", user[1])
-        print("Your role:", user[4])
+        else:
+            print("Incorrect choice! Please enter a number from 1 to 4.")
 
-    else:
-        print("\nInvalid email or password!")
-print("\n===== CUSTOMER LOGIN =====")
 
-email = input("Enter your email: ")
-password = input("Enter your password: ")
-
-login_user(email, password)
-
+main()
